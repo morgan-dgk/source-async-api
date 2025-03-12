@@ -1,0 +1,891 @@
+{
+  "version": "6.33.4",
+  "streams": [
+    {
+      "type": "DeclarativeStream",
+      "retriever": {
+        "type": "AsyncRetriever",
+        "creation_requester": {
+          "type": "HttpRequester",
+          "url_base": "{{ config.url_base }}",
+          "authenticator": {
+            "type": "SelectiveAuthenticator",
+            "authenticator_selection_path": [
+              "credentials"
+            ],
+            "authenticators": {
+              "basic": {
+                "type": "BasicHttpAuthenticator",
+                "username": "{{ config.username }}",
+                "password": "{{ config.password }}"
+              },
+              "session_token": {
+                "type": "SessionTokenAuthenticator",
+                "login_requester": {
+                  "type": "HttpRequester",
+                  "url_base": "{{ config.url_base }}",
+                  "path": "{{ config.session_token_login_path }}",
+                  "authenticator": {
+                    "type": "BasicHttpAuthenticator",
+                    "username": "{{ config.username }}",
+                    "password": "{{ config.password }}"
+                  }
+                },
+                "session_token_path": [
+                  "{{ config.session_token_path }}"
+                ],
+                "expiration_duration": "{{ config.session_token_exp_duration }}",
+                "request_authentication": {
+                  "type": "Bearer"
+                }
+              }
+            }
+          },
+          "path": "{{ config.create_request_path }}",
+          "http_method": "POST",
+          "request_body_json": {
+            "criteria": {
+              "limit": "500000",
+              "metric": "{{ config['metric'] }}",
+              "currency": "{{ config['currency'] }}",
+              "dimension": "{{ config['dimension'] }}",
+              "date_range": "yesterday"
+            }
+          }
+        },
+        "polling_requester": {
+          "type": "HttpRequester",
+          "url_base": "{{ config.url_base }}",
+          "authenticator": {
+            "type": "SelectiveAuthenticator",
+            "authenticator_selection_path": [
+              "credentials"
+            ],
+            "authenticators": {
+              "basic": {
+                "type": "BasicHttpAuthenticator",
+                "username": "{{ config.username }}",
+                "password": "{{ config.password }}"
+              },
+              "session_token": {
+                "type": "SessionTokenAuthenticator",
+                "login_requester": {
+                  "type": "HttpRequester",
+                  "url_base": "{{ config.url_base }}",
+                  "path": "{{ config.session_token_login_path }}",
+                  "authenticator": {
+                    "type": "BasicHttpAuthenticator",
+                    "username": "{{ config.username }}",
+                    "password": "{{ config.password }}"
+                  }
+                },
+                "session_token_path": [
+                  "{{ config.session_token_path }}"
+                ],
+                "expiration_duration": "{{ config.session_token_exp_duration }}",
+                "request_authentication": {
+                  "type": "Bearer"
+                }
+              }
+            }
+          },
+          "path": "{{ config.polling_request_path }}",
+          "http_method": "GET"
+        },
+        "download_requester": {
+          "type": "HttpRequester",
+          "url_base": "{{ config.url_base }}",
+          "authenticator": {
+            "type": "SelectiveAuthenticator",
+            "authenticator_selection_path": [
+              "credentials"
+            ],
+            "authenticators": {
+              "basic": {
+                "type": "BasicHttpAuthenticator",
+                "username": "{{ config.username }}",
+                "password": "{{ config.password }}"
+              },
+              "session_token": {
+                "type": "SessionTokenAuthenticator",
+                "login_requester": {
+                  "type": "HttpRequester",
+                  "url_base": "{{ config.url_base }}",
+                  "path": "{{ config.session_token_login_path }}",
+                  "authenticator": {
+                    "type": "BasicHttpAuthenticator",
+                    "username": "{{ config.username }}",
+                    "password": "{{ config.password }}"
+                  }
+                },
+                "session_token_path": [
+                  "{{ config.session_token_path }}"
+                ],
+                "expiration_duration": "{{ config.session_token_exp_duration }}",
+                "request_authentication": {
+                  "type": "Bearer"
+                }
+              }
+            }
+          },
+          "path": "{{ config.download_request_path }}",
+          "http_method": "GET"
+        },
+        "status_mapping": {
+          "failed": [
+            "failed"
+          ],
+          "running": [
+            "queued",
+            "pending"
+          ],
+          "timeout": [
+            "timeout"
+          ],
+          "completed": [
+            "success"
+          ]
+        },
+        "status_extractor": {
+          "type": "DpathExtractor",
+          "field_path": [
+            "{{ config.status_path }}"
+          ]
+        },
+        "partition_router": {
+          "type": "ListPartitionRouter",
+          "values": "{{ config.accounts }}",
+          "cursor_field": "account",
+          "request_option": {
+            "type": "RequestOption",
+            "field_name": "account",
+            "inject_into": "request_parameter"
+          }
+        },
+        "urls_extractor": {
+          "type": "DpathExtractor",
+          "field_path": [
+            "{{ config.url_extractor_path }}"
+          ]
+        },
+        "record_selector": {
+          "type": "RecordSelector",
+          "extractor": {
+            "type": "DpathExtractor",
+            "field_path": [
+              "content"
+            ]
+          }
+        },
+        "download_paginator": {
+          "type": "DefaultPaginator",
+          "pagination_strategy": {
+            "type": "PageIncrement",
+            "page_size": 5,
+            "start_from_page": 1,
+            "inject_on_first_request": true
+          },
+          "page_token_option": {
+            "type": "RequestOption",
+            "field_name": "page",
+            "inject_into": "request_parameter"
+          }
+        }
+      }
+    }
+  ],
+  "type": "DeclarativeSource",
+  "check": {
+    "type": "CheckStream",
+    "stream_names": [
+      "report_stream"
+    ]
+  },
+  "definitions": {
+    "partition_router": {
+      "type": "ListPartitionRouter",
+      "values": "{{ config.accounts }}",
+      "cursor_field": "account",
+      "request_option": {
+        "type": "RequestOption",
+        "field_name": "account",
+        "inject_into": "request_parameter"
+      }
+    },
+    "requesters": {
+      "base_requester": {
+        "type": "HttpRequester",
+        "url_base": "{{ config.url_base }}",
+        "authenticator": {
+          "type": "SelectiveAuthenticator",
+          "authenticator_selection_path": [
+            "credentials"
+          ],
+          "authenticators": {
+            "basic": {
+              "type": "BasicHttpAuthenticator",
+              "username": "{{ config.username }}",
+              "password": "{{ config.password }}"
+            },
+            "session_token": {
+              "type": "SessionTokenAuthenticator",
+              "login_requester": {
+                "type": "HttpRequester",
+                "url_base": "{{ config.url_base }}",
+                "path": "{{ config.session_token_login_path }}",
+                "authenticator": {
+                  "type": "BasicHttpAuthenticator",
+                  "username": "{{ config.username }}",
+                  "password": "{{ config.password }}"
+                }
+              },
+              "session_token_path": [
+                "{{ config.session_token_path }}"
+              ],
+              "expiration_duration": "{{ config.session_token_exp_duration }}",
+              "request_authentication": {
+                "type": "Bearer"
+              }
+            }
+          }
+        }
+      },
+      "creation_requester": {
+        "type": "HttpRequester",
+        "url_base": "{{ config.url_base }}",
+        "authenticator": {
+          "type": "SelectiveAuthenticator",
+          "authenticator_selection_path": [
+            "credentials"
+          ],
+          "authenticators": {
+            "basic": {
+              "type": "BasicHttpAuthenticator",
+              "username": "{{ config.username }}",
+              "password": "{{ config.password }}"
+            },
+            "session_token": {
+              "type": "SessionTokenAuthenticator",
+              "login_requester": {
+                "type": "HttpRequester",
+                "url_base": "{{ config.url_base }}",
+                "path": "{{ config.session_token_login_path }}",
+                "authenticator": {
+                  "type": "BasicHttpAuthenticator",
+                  "username": "{{ config.username }}",
+                  "password": "{{ config.password }}"
+                }
+              },
+              "session_token_path": [
+                "{{ config.session_token_path }}"
+              ],
+              "expiration_duration": "{{ config.session_token_exp_duration }}",
+              "request_authentication": {
+                "type": "Bearer"
+              }
+            }
+          }
+        },
+        "path": "{{ config.create_request_path }}",
+        "http_method": "POST",
+        "request_body_json": {
+          "criteria": {
+            "limit": "500000",
+            "metric": "{{ config['metric'] }}",
+            "currency": "{{ config['currency'] }}",
+            "dimension": "{{ config['dimension'] }}",
+            "date_range": "yesterday"
+          }
+        }
+      },
+      "polling_requester": {
+        "type": "HttpRequester",
+        "url_base": "{{ config.url_base }}",
+        "authenticator": {
+          "type": "SelectiveAuthenticator",
+          "authenticator_selection_path": [
+            "credentials"
+          ],
+          "authenticators": {
+            "basic": {
+              "type": "BasicHttpAuthenticator",
+              "username": "{{ config.username }}",
+              "password": "{{ config.password }}"
+            },
+            "session_token": {
+              "type": "SessionTokenAuthenticator",
+              "login_requester": {
+                "type": "HttpRequester",
+                "url_base": "{{ config.url_base }}",
+                "path": "{{ config.session_token_login_path }}",
+                "authenticator": {
+                  "type": "BasicHttpAuthenticator",
+                  "username": "{{ config.username }}",
+                  "password": "{{ config.password }}"
+                }
+              },
+              "session_token_path": [
+                "{{ config.session_token_path }}"
+              ],
+              "expiration_duration": "{{ config.session_token_exp_duration }}",
+              "request_authentication": {
+                "type": "Bearer"
+              }
+            }
+          }
+        },
+        "path": "{{ config.polling_request_path }}",
+        "http_method": "GET"
+      },
+      "download_requester": {
+        "type": "HttpRequester",
+        "url_base": "{{ config.url_base }}",
+        "authenticator": {
+          "type": "SelectiveAuthenticator",
+          "authenticator_selection_path": [
+            "credentials"
+          ],
+          "authenticators": {
+            "basic": {
+              "type": "BasicHttpAuthenticator",
+              "username": "{{ config.username }}",
+              "password": "{{ config.password }}"
+            },
+            "session_token": {
+              "type": "SessionTokenAuthenticator",
+              "login_requester": {
+                "type": "HttpRequester",
+                "url_base": "{{ config.url_base }}",
+                "path": "{{ config.session_token_login_path }}",
+                "authenticator": {
+                  "type": "BasicHttpAuthenticator",
+                  "username": "{{ config.username }}",
+                  "password": "{{ config.password }}"
+                }
+              },
+              "session_token_path": [
+                "{{ config.session_token_path }}"
+              ],
+              "expiration_duration": "{{ config.session_token_exp_duration }}",
+              "request_authentication": {
+                "type": "Bearer"
+              }
+            }
+          }
+        },
+        "path": "{{ config.download_request_path }}",
+        "http_method": "GET"
+      }
+    },
+    "authentication": {
+      "basic_authenticator": {
+        "type": "BasicHttpAuthenticator",
+        "username": "{{ config.username }}",
+        "password": "{{ config.password }}"
+      },
+      "session_token_authenticator": {
+        "type": "SessionTokenAuthenticator",
+        "login_requester": {
+          "type": "HttpRequester",
+          "url_base": "{{ config.url_base }}",
+          "path": "{{ config.session_token_login_path }}",
+          "authenticator": {
+            "type": "BasicHttpAuthenticator",
+            "username": "{{ config.username }}",
+            "password": "{{ config.password }}"
+          }
+        },
+        "session_token_path": [
+          "{{ config.session_token_path }}"
+        ],
+        "expiration_duration": "{{ config.session_token_exp_duration }}",
+        "request_authentication": {
+          "type": "Bearer"
+        }
+      },
+      "selective_authenticator": {
+        "type": "SelectiveAuthenticator",
+        "authenticator_selection_path": [
+          "credentials"
+        ],
+        "authenticators": {
+          "basic": {
+            "type": "BasicHttpAuthenticator",
+            "username": "{{ config.username }}",
+            "password": "{{ config.password }}"
+          },
+          "session_token": {
+            "type": "SessionTokenAuthenticator",
+            "login_requester": {
+              "type": "HttpRequester",
+              "url_base": "{{ config.url_base }}",
+              "path": "{{ config.session_token_login_path }}",
+              "authenticator": {
+                "type": "BasicHttpAuthenticator",
+                "username": "{{ config.username }}",
+                "password": "{{ config.password }}"
+              }
+            },
+            "session_token_path": [
+              "{{ config.session_token_path }}"
+            ],
+            "expiration_duration": "{{ config.session_token_exp_duration }}",
+            "request_authentication": {
+              "type": "Bearer"
+            }
+          }
+        }
+      }
+    },
+    "api_status_mapping": {
+      "failed": [
+        "failed"
+      ],
+      "running": [
+        "queued",
+        "pending"
+      ],
+      "timeout": [
+        "timeout"
+      ],
+      "completed": [
+        "success"
+      ]
+    },
+    "api_extractors": {
+      "urls_extractor": {
+        "type": "DpathExtractor",
+        "field_path": [
+          "{{ config.url_extractor_path }}"
+        ]
+      },
+      "status_extractor": {
+        "type": "DpathExtractor",
+        "field_path": [
+          "{{ config.status_path }}"
+        ]
+      }
+    },
+    "record_selector": {
+      "type": "RecordSelector",
+      "extractor": {
+        "type": "DpathExtractor",
+        "field_path": [
+          "content"
+        ]
+      }
+    },
+    "pagination": {
+      "type": "DefaultPaginator",
+      "pagination_strategy": {
+        "type": "PageIncrement",
+        "page_size": 5,
+        "start_from_page": 1,
+        "inject_on_first_request": true
+      },
+      "page_token_option": {
+        "type": "RequestOption",
+        "field_name": "page",
+        "inject_into": "request_parameter"
+      }
+    },
+    "async_retriever": {
+      "type": "AsyncRetriever",
+      "creation_requester": {
+        "type": "HttpRequester",
+        "url_base": "{{ config.url_base }}",
+        "authenticator": {
+          "type": "SelectiveAuthenticator",
+          "authenticator_selection_path": [
+            "credentials"
+          ],
+          "authenticators": {
+            "basic": {
+              "type": "BasicHttpAuthenticator",
+              "username": "{{ config.username }}",
+              "password": "{{ config.password }}"
+            },
+            "session_token": {
+              "type": "SessionTokenAuthenticator",
+              "login_requester": {
+                "type": "HttpRequester",
+                "url_base": "{{ config.url_base }}",
+                "path": "{{ config.session_token_login_path }}",
+                "authenticator": {
+                  "type": "BasicHttpAuthenticator",
+                  "username": "{{ config.username }}",
+                  "password": "{{ config.password }}"
+                }
+              },
+              "session_token_path": [
+                "{{ config.session_token_path }}"
+              ],
+              "expiration_duration": "{{ config.session_token_exp_duration }}",
+              "request_authentication": {
+                "type": "Bearer"
+              }
+            }
+          }
+        },
+        "path": "{{ config.create_request_path }}",
+        "http_method": "POST",
+        "request_body_json": {
+          "criteria": {
+            "limit": "500000",
+            "metric": "{{ config['metric'] }}",
+            "currency": "{{ config['currency'] }}",
+            "dimension": "{{ config['dimension'] }}",
+            "date_range": "yesterday"
+          }
+        }
+      },
+      "polling_requester": {
+        "type": "HttpRequester",
+        "url_base": "{{ config.url_base }}",
+        "authenticator": {
+          "type": "SelectiveAuthenticator",
+          "authenticator_selection_path": [
+            "credentials"
+          ],
+          "authenticators": {
+            "basic": {
+              "type": "BasicHttpAuthenticator",
+              "username": "{{ config.username }}",
+              "password": "{{ config.password }}"
+            },
+            "session_token": {
+              "type": "SessionTokenAuthenticator",
+              "login_requester": {
+                "type": "HttpRequester",
+                "url_base": "{{ config.url_base }}",
+                "path": "{{ config.session_token_login_path }}",
+                "authenticator": {
+                  "type": "BasicHttpAuthenticator",
+                  "username": "{{ config.username }}",
+                  "password": "{{ config.password }}"
+                }
+              },
+              "session_token_path": [
+                "{{ config.session_token_path }}"
+              ],
+              "expiration_duration": "{{ config.session_token_exp_duration }}",
+              "request_authentication": {
+                "type": "Bearer"
+              }
+            }
+          }
+        },
+        "path": "{{ config.polling_request_path }}",
+        "http_method": "GET"
+      },
+      "download_requester": {
+        "type": "HttpRequester",
+        "url_base": "{{ config.url_base }}",
+        "authenticator": {
+          "type": "SelectiveAuthenticator",
+          "authenticator_selection_path": [
+            "credentials"
+          ],
+          "authenticators": {
+            "basic": {
+              "type": "BasicHttpAuthenticator",
+              "username": "{{ config.username }}",
+              "password": "{{ config.password }}"
+            },
+            "session_token": {
+              "type": "SessionTokenAuthenticator",
+              "login_requester": {
+                "type": "HttpRequester",
+                "url_base": "{{ config.url_base }}",
+                "path": "{{ config.session_token_login_path }}",
+                "authenticator": {
+                  "type": "BasicHttpAuthenticator",
+                  "username": "{{ config.username }}",
+                  "password": "{{ config.password }}"
+                }
+              },
+              "session_token_path": [
+                "{{ config.session_token_path }}"
+              ],
+              "expiration_duration": "{{ config.session_token_exp_duration }}",
+              "request_authentication": {
+                "type": "Bearer"
+              }
+            }
+          }
+        },
+        "path": "{{ config.download_request_path }}",
+        "http_method": "GET"
+      },
+      "status_mapping": {
+        "failed": [
+          "failed"
+        ],
+        "running": [
+          "queued",
+          "pending"
+        ],
+        "timeout": [
+          "timeout"
+        ],
+        "completed": [
+          "success"
+        ]
+      },
+      "status_extractor": {
+        "type": "DpathExtractor",
+        "field_path": [
+          "{{ config.status_path }}"
+        ]
+      },
+      "partition_router": {
+        "type": "ListPartitionRouter",
+        "values": "{{ config.accounts }}",
+        "cursor_field": "account",
+        "request_option": {
+          "type": "RequestOption",
+          "field_name": "account",
+          "inject_into": "request_parameter"
+        }
+      },
+      "urls_extractor": {
+        "type": "DpathExtractor",
+        "field_path": [
+          "{{ config.url_extractor_path }}"
+        ]
+      },
+      "record_selector": {
+        "type": "RecordSelector",
+        "extractor": {
+          "type": "DpathExtractor",
+          "field_path": [
+            "content"
+          ]
+        }
+      },
+      "download_paginator": {
+        "type": "DefaultPaginator",
+        "pagination_strategy": {
+          "type": "PageIncrement",
+          "page_size": 5,
+          "start_from_page": 1,
+          "inject_on_first_request": true
+        },
+        "page_token_option": {
+          "type": "RequestOption",
+          "field_name": "page",
+          "inject_into": "request_parameter"
+        }
+      }
+    },
+    "streams": {
+      "test_stream": {
+        "type": "DeclarativeStream",
+        "retriever": {
+          "type": "AsyncRetriever",
+          "creation_requester": {
+            "type": "HttpRequester",
+            "url_base": "{{ config.url_base }}",
+            "authenticator": {
+              "type": "SelectiveAuthenticator",
+              "authenticator_selection_path": [
+                "credentials"
+              ],
+              "authenticators": {
+                "basic": {
+                  "type": "BasicHttpAuthenticator",
+                  "username": "{{ config.username }}",
+                  "password": "{{ config.password }}"
+                },
+                "session_token": {
+                  "type": "SessionTokenAuthenticator",
+                  "login_requester": {
+                    "type": "HttpRequester",
+                    "url_base": "{{ config.url_base }}",
+                    "path": "{{ config.session_token_login_path }}",
+                    "authenticator": {
+                      "type": "BasicHttpAuthenticator",
+                      "username": "{{ config.username }}",
+                      "password": "{{ config.password }}"
+                    }
+                  },
+                  "session_token_path": [
+                    "{{ config.session_token_path }}"
+                  ],
+                  "expiration_duration": "{{ config.session_token_exp_duration }}",
+                  "request_authentication": {
+                    "type": "Bearer"
+                  }
+                }
+              }
+            },
+            "path": "{{ config.create_request_path }}",
+            "http_method": "POST",
+            "request_body_json": {
+              "criteria": {
+                "limit": "500000",
+                "metric": "{{ config['metric'] }}",
+                "currency": "{{ config['currency'] }}",
+                "dimension": "{{ config['dimension'] }}",
+                "date_range": "yesterday"
+              }
+            }
+          },
+          "polling_requester": {
+            "type": "HttpRequester",
+            "url_base": "{{ config.url_base }}",
+            "authenticator": {
+              "type": "SelectiveAuthenticator",
+              "authenticator_selection_path": [
+                "credentials"
+              ],
+              "authenticators": {
+                "basic": {
+                  "type": "BasicHttpAuthenticator",
+                  "username": "{{ config.username }}",
+                  "password": "{{ config.password }}"
+                },
+                "session_token": {
+                  "type": "SessionTokenAuthenticator",
+                  "login_requester": {
+                    "type": "HttpRequester",
+                    "url_base": "{{ config.url_base }}",
+                    "path": "{{ config.session_token_login_path }}",
+                    "authenticator": {
+                      "type": "BasicHttpAuthenticator",
+                      "username": "{{ config.username }}",
+                      "password": "{{ config.password }}"
+                    }
+                  },
+                  "session_token_path": [
+                    "{{ config.session_token_path }}"
+                  ],
+                  "expiration_duration": "{{ config.session_token_exp_duration }}",
+                  "request_authentication": {
+                    "type": "Bearer"
+                  }
+                }
+              }
+            },
+            "path": "{{ config.polling_request_path }}",
+            "http_method": "GET"
+          },
+          "download_requester": {
+            "type": "HttpRequester",
+            "url_base": "{{ config.url_base }}",
+            "authenticator": {
+              "type": "SelectiveAuthenticator",
+              "authenticator_selection_path": [
+                "credentials"
+              ],
+              "authenticators": {
+                "basic": {
+                  "type": "BasicHttpAuthenticator",
+                  "username": "{{ config.username }}",
+                  "password": "{{ config.password }}"
+                },
+                "session_token": {
+                  "type": "SessionTokenAuthenticator",
+                  "login_requester": {
+                    "type": "HttpRequester",
+                    "url_base": "{{ config.url_base }}",
+                    "path": "{{ config.session_token_login_path }}",
+                    "authenticator": {
+                      "type": "BasicHttpAuthenticator",
+                      "username": "{{ config.username }}",
+                      "password": "{{ config.password }}"
+                    }
+                  },
+                  "session_token_path": [
+                    "{{ config.session_token_path }}"
+                  ],
+                  "expiration_duration": "{{ config.session_token_exp_duration }}",
+                  "request_authentication": {
+                    "type": "Bearer"
+                  }
+                }
+              }
+            },
+            "path": "{{ config.download_request_path }}",
+            "http_method": "GET"
+          },
+          "status_mapping": {
+            "failed": [
+              "failed"
+            ],
+            "running": [
+              "queued",
+              "pending"
+            ],
+            "timeout": [
+              "timeout"
+            ],
+            "completed": [
+              "success"
+            ]
+          },
+          "status_extractor": {
+            "type": "DpathExtractor",
+            "field_path": [
+              "{{ config.status_path }}"
+            ]
+          },
+          "partition_router": {
+            "type": "ListPartitionRouter",
+            "values": "{{ config.accounts }}",
+            "cursor_field": "account",
+            "request_option": {
+              "type": "RequestOption",
+              "field_name": "account",
+              "inject_into": "request_parameter"
+            }
+          },
+          "urls_extractor": {
+            "type": "DpathExtractor",
+            "field_path": [
+              "{{ config.url_extractor_path }}"
+            ]
+          },
+          "record_selector": {
+            "type": "RecordSelector",
+            "extractor": {
+              "type": "DpathExtractor",
+              "field_path": [
+                "content"
+              ]
+            }
+          },
+          "download_paginator": {
+            "type": "DefaultPaginator",
+            "pagination_strategy": {
+              "type": "PageIncrement",
+              "page_size": 5,
+              "start_from_page": 1,
+              "inject_on_first_request": true
+            },
+            "page_token_option": {
+              "type": "RequestOption",
+              "field_name": "page",
+              "inject_into": "request_parameter"
+            }
+          }
+        }
+      }
+    }
+  },
+  "metadata": {
+    "assist": {},
+    "testedStreams": {
+      "report_stream": {
+        "hasRecords": true,
+        "streamHash": "c5e2cf9acc6f9a9f48a150a4bfde1bd2e09c244b",
+        "hasResponse": true,
+        "primaryKeysAreUnique": true,
+        "primaryKeysArePresent": true,
+        "responsesAreSuccessful": true
+      }
+    },
+    "autoImportSchema": {}
+  },
+  "schemas": {}
+}

@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "async-api-connector"
+version = "0.1.0"
+description = "An Airbyte Connector for use with APIs that use an async pattern (i.e. where polling for a response is required)"
+authors = ["Morgan Kerle <morgan.kerle@nine.com.au>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.13"
+airbyte-cdk = "^6.38.4"
+pydantic = "^2.10.6"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
