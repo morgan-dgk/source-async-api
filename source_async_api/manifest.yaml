@@ -122,8 +122,6 @@ definitions:
       field_name: page
       inject_into: request_parameter
 
-  
-
   async_retriever:
     type: AsyncRetriever
     creation_requester: "#/definitions/requesters/creation_requester"
